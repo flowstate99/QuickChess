@@ -1,17 +1,24 @@
-import React from 'react'
-import Chessboard from './components/chessboard';
-import './App.css'
+import React from 'react';
+import {Route, Routes } from 'react-router-dom';
+import LandingPage from './components/LandingPage';
+import HomePage from './components/HomePage';
+import GamePage from './components/GamePage';
+import Login from './components/Login';
+import SignUp from './components/SignUp';
+import './App.css';
 
-function App() {
+const App = () => {
   return (
-    <div className='App'>
-      <h1>ChessGOD</h1>
-      <div className='Game'>
-        <Chessboard />
-        {/* <GameControls /> */}
-      </div>
-    </div>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/home" element={<HomePage />} />
+        <Route path="/game" element={<GamePage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<SignUp />} />
+      </Routes>
   );
-}
+};
 
 export default App;
+
+
