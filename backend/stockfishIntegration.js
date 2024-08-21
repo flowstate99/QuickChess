@@ -3,7 +3,7 @@ const stockfish = require('stockfish');
 const engine = stockfish();
 
 engine.onmessage = (event) => {
-  console.log(event.data);
+  console.log(event);
 };
 
 const sendCommand = (command) => {
@@ -13,8 +13,8 @@ const sendCommand = (command) => {
 const getBestMove = (position) => {
   return new Promise((resolve) => {
     engine.onmessage = (event) => {
-      if (event.data.includes('bestmove')) {
-        const bestMove = event.data.split('bestmove ')[1].split(' ')[0];
+      if (event.includes('bestmove')) {
+        const bestMove = event.split('bestmove ')[1].split(' ')[0];
         resolve(bestMove);
       }
     };

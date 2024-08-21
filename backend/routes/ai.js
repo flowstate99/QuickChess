@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getBestMove } = require('../stockfishIntegration');
+const { getBestMove } = require('../stockfishIntegration.js');
 
 router.post('/move', async (req, res) => {
   const { position } = req.body;
