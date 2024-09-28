@@ -193,9 +193,53 @@ const Chessboard = () => {
             isPlayerTurn: true
           })
         }}>New Game</button>
+        <button
+          disabled={gameState.isGameOver
+          || !gameState.isPlayerTurn} onClick={() => handleResign()}>Resign</button>
+        <button disabled={
+          gameState.isGameOver
+          || !gameState.isPlayerTurn} onClick={() => handleDrawOffer()}>Offer Draw</button>
+        {gameState.currentMoveIndex > 0 && (
+          <button disabled={gameState.isGameOver} onClick={() => handleTakeback()}>Take Back</button>
+        )}
       </div>
     );
   };
+
+  const handleResign = () => {
+    if (gameState.isGameOver) return;
+    setGameState((prevState) => ({
+      ...prevState,
+      isGameOver: true,
+      error: 'You resigned. opponent wins!'
+    }));
+  };
+
+  const handleDrawOffer = () => {
+    if (gameState.isGameOver) return;
+    setGameState((prevState) => ({
+      ...prevState,
+      isGameOver: true,
+      error: 'Draw offered.'
+    }));
+  };
+
+  const handleTakeback = () => {
+    if (gameState.isGameOver) return;
+    if (gameState.currentMoveIndex < 1) return;
+
+    const newGame = new Chess();
+    for (let i = 0; i <= gameState.currentMoveIndex - 2; i++) {
+      newGame.move(gameState.moveHistory[i].san);
+    }
+    setGameState({
+      ...gameState,
+      game: newGame,
+      moveHistory: gameState.moveHistory.slice(0, gameState.currentMoveIndex - 1),
+      currentMoveIndex: gameState.currentMoveIndex - 2
+    });
+  };
+
 
   const handleSquareClick = (i, j) => {
     if (gameState.isGameOver) return;
