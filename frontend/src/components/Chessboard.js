@@ -1,5 +1,4 @@
-// Chessboard.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Chess } from 'chess.js';
 import './Chessboard.css';
 
@@ -15,111 +14,239 @@ const initialBoard = [
 ];
 
 const Chessboard = () => {
-  const [game, setGame] = useState(new Chess());
-  const [board, setBoard] = useState(initialBoard);
-  const [selectedPiece, setSelectedPiece] = useState(null);
-  const [moveHistory, setMoveHistory] = useState([]);
-  const [currentMoveIndex, setCurrentMoveIndex] = useState(-1);
-  const [error, setError] = useState('');
-  const [draggedPiece, setDraggedPiece] = useState(null);
-  const [isGameOver, setIsGameOver] = useState(false);
+  const [gameState, setGameState] = useState({
+    game: new Chess(),
+    board: initialBoard,
+    selectedPiece: null,
+    moveHistory: [],
+    currentMoveIndex: -1,
+    error: '',
+    draggedPiece: null,
+    isGameOver: false,
+    stockfishLevel: 1,
+    isPlayerTurn: true
+  })
+
+  const stockfishWorker = useRef(null)
 
   useEffect(() => {
-    updateBoard();
-    checkGameOver();
-  }, [game]);
+    try {
+      if (!stockfishWorker.current) {
+        stockfishWorker.current = new Worker('stockfishWorker.js');
+        stockfishWorker.current.onmessage = handleStockfishMessage
+    
+        console.log('Stockfish worker initialized');
+        return () => {
+          if (stockfishWorker.current) {
+            stockfishWorker.current.terminate();
+            stockfishWorker.current = null;
+            console.log('Stockfish worker terminated');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error initializing Stockfish worker:', error);
+    }
+    // eslint-disable-next-line
+}, []);
+
+
+  const updateGameState = useCallback((updates) => {
+    setGameState((prevState) => ({
+      ...prevState,
+      ...updates,
+      board: updates.game ? updates.game.board().map(row => row.map(square => square ? `${square.color}${square.type}` : '')) : prevState.board,
+      isGameOver: updates.game ? updates.game.isGameOver() : prevState.isGameOver
+    }))
+  }, [])
+
+  const checkGameOver = () => {
+    setGameState((prevState) => ({
+      ...prevState,
+      isGameOver: prevState.game.isGameOver()
+    }))
+  };
+
+  const handleStockfishMessage = useCallback((event) => {
+    const message = event.data;
+    if (typeof message === 'string') {
+      if (message.startsWith('bestmove')) {
+        const bestMove = message.split(' ')[1]; // Extract the move from the message
+        console.log('Stockfish best move:', bestMove);
+        
+        if (bestMove) {
+          const from = bestMove.slice(0, 2); // e.g., "e2"
+          const to = bestMove.slice(2, 4);   // e.g., "e4"
+
+          // Check if the move is valid for the current game state
+          const newGame = new Chess(gameState.game.fen());
+          
+          // No promotion unless necessary
+          const move = newGame.move({
+            from: from,
+            to: to,
+            promotion: (from[1] === '7' && to[1] === '8') || (from[1] === '2' && to[1] === '1') ? 'q' : undefined // Add promotion only if needed
+          });
+
+          if (move) {
+            updateGameState({ 
+                game: newGame, 
+                isPlayerTurn: true // Switch back to player's turn
+            });
+            console.log('Stockfish move applied:', move.san);
+          } else {
+              console.error('Failed to apply Stockfish move:', bestMove);
+          }
+        }
+      }
+  }
+}, [gameState.game, updateGameState]);
+
+
+  useEffect(() => {
+    if (stockfishWorker.current) {
+      stockfishWorker.current.onmessage = handleStockfishMessage
+    }
+  }, [handleStockfishMessage])
+
+  useEffect(() => {
+    if (!gameState.isPlayerTurn && !gameState.isGameOver) {
+      makeStockfishMove()
+    }
+  })
+
+  const makeStockfishMove = useCallback(() => {
+    try {
+      if (stockfishWorker.current) {
+        if (typeof stockfishWorker.current.postMessage === 'function') {
+          try {
+            const fen = gameState.game.fen();
+            stockfishWorker.current.postMessage(`position fen ${fen}`);
+            
+            const depth = gameState.stockfishLevel;
+            stockfishWorker.current.postMessage(`go depth ${depth}`);
+          } catch (error) {
+          }
+        } else {
+          console.error('postMessage is not a function on stockfishWorker.current');
+        }
+      } else {
+        console.error('Stockfish worker is not initialized');
+      }
+    } catch (error) {
+      console.error('Error making Stockfish move:', error);
+    }
+  }, [gameState.game, gameState.stockfishLevel]);
+
+  const handleMove = useCallback((from, to) => {
+    if (gameState.isGameOver || !gameState.isPlayerTurn) return;
+
+    try {
+      const moveDetails = {
+        from: from.square,
+        to: to.square,
+        promotion: (from[1] === '7' && to[1] === '8') || (from[1] === '2' && to[1] === '1') ? 'q' : undefined
+      };
+      const newGame = new Chess(gameState.game.fen());
+      const move = newGame.move(moveDetails);
+      updateGameState({
+        game: newGame,
+        moveHistory: [...gameState.moveHistory.slice(0, gameState.currentMoveIndex + 1), move],
+        currentMoveIndex: gameState.currentMoveIndex + 1,
+        error: '',
+        isPlayerTurn: false
+      })
+      console.log('Move made:', move.san);
+      // makeStockfishMove();
+      } catch (error) {
+      setGameState((prevState) => ({
+        ...prevState,
+        error: 'Invalid move. Please try again.',
+      }));
+    } finally {
+      setGameState((prevState) => ({
+        ...prevState,
+        selectedPiece: null,
+        draggedPiece: null,
+      }));
+    }
+  }, [gameState.isGameOver, gameState.isPlayerTurn, gameState.currentMoveIndex, gameState.game, gameState.moveHistory, updateGameState]);
 
   const Controls = () => {
     return (
       <div className="controls">
-        <select>
-          <option value="level1">Level 1</option>
-          <option value="level2">Level 2</option>
-          <option value="level3">Level 3</option>
-          <option value="level4">Level 4</option>
-          <option value="level5">Level 5</option>
-          <option value="level6">Level 6</option>
-          <option value="level7">Level 7</option>
-          <option value="level8">Level 8</option>
-          <option value="level9">Level 9</option>
-          <option value="level10">Level 10</option>
+        <select
+          value={gameState.stockfishLevel}
+          onChange={(e) => updateGameState({ stockfishLevel: parseInt(e.target.value) })}
+        >
+          {[...Array(10)].map((_, i) => (
+            <option key={i} value={i + 1}>Level {i + 1}</option>
+          )
+          )}
         </select>
-        <button>New Game</button>
+        <button onClick={() => {
+          updateGameState({
+            game: new Chess(),
+            moveHistory: [],
+            currentMoveIndex: -1,
+            isGameOver: false,
+            isPlayerTurn: true
+          })
+        }}>New Game</button>
       </div>
     );
   };
 
-  const updateBoard = () => {
-    setBoard(game.board().map(row => row.map(square => square ? `${square.color}${square.type}` : '')));
-  };
-
-  const checkGameOver = () => {
-    setIsGameOver(game.isGameOver());
-  };
-
-  const handleMove = (from, to) => {
-    if (isGameOver) return;
-
-    const currentTurn = game.turn();
-    try {
-      if (currentTurn === board[from.i][from.j][0]) {
-        const moveDetails = { from: from.square, to: to.square };
-        
-        // Always promote to queen
-        if (currentTurn === 'w' && to.i === 0 && board[from.i][from.j][1] === 'p') {
-          moveDetails.promotion = 'q';
-        } else if (currentTurn === 'b' && to.i === 7 && board[from.i][from.j][1] === 'p') {
-          moveDetails.promotion = 'q';
-        }
-
-        let move = game.move(moveDetails);
-        setGame(new Chess(game.fen()));
-        setMoveHistory([...moveHistory.slice(0, currentMoveIndex + 1), move]);
-        setCurrentMoveIndex(currentMoveIndex + 1);
-        setError('');
-      } else {
-        setError("It's not your turn.");
-      }
-    } catch (error) {
-      setError('Invalid move. Please try again.');
-    } finally {
-      setSelectedPiece(null);
-      setDraggedPiece(null);
-    }
-  };
-
   const handleSquareClick = (i, j) => {
-    if (isGameOver) return;
+    if (gameState.isGameOver) return;
+    if (!gameState.isPlayerTurn) return;
 
-    const clickedPiece = board[i][j];
+    const clickedPiece = gameState.board[i][j];
     const square = `${String.fromCharCode(97 + j)}${8 - i}`;
     
-    if (selectedPiece) {
-      if (clickedPiece && clickedPiece[0] === game.turn()) {
+    if (gameState.selectedPiece) {
+      if (clickedPiece && clickedPiece[0] === gameState.game.turn()) {
         // If clicking on another piece of the same color, switch the selected piece
-        setSelectedPiece({ piece: clickedPiece, i, j, square });
-        setError('');
+        setGameState((prevState) => ({
+          ...prevState,
+          selectedPiece: { piece: clickedPiece, i, j, square },
+          error: '',
+        }));
       } else {
         // Otherwise, attempt to make a move
-        handleMove(selectedPiece, { i, j, square });
+        handleMove(gameState.selectedPiece, { i, j, square });
       }
-    } else if (clickedPiece && clickedPiece[0] === game.turn()) {
-      setSelectedPiece({ piece: clickedPiece, i, j, square });
-      setError('');
+    } else if (clickedPiece && clickedPiece[0] === gameState.game.turn()) {
+      setGameState((prevState) => ({
+        ...prevState,
+        selectedPiece: { piece: clickedPiece, i, j, square },
+        error: '',
+      }));
     } else {
-      setError("You can only move your own pieces on your turn.");
+      setGameState((prevState) => ({
+        ...prevState,
+        error: 'Please select a piece to move.',
+      }));
     }
   };
 
   const handleDragStart = (e, i, j) => {
-    if (isGameOver) {
+    if (gameState.isGameOver) {
+      e.preventDefault();
+      return;
+    }
+    if (!gameState.isPlayerTurn) {
       e.preventDefault();
       return;
     }
 
-    const piece = board[i][j];
-    if (piece && piece[0] === game.turn()) {
-      setDraggedPiece({ piece, i, j, square: `${String.fromCharCode(97 + j)}${8 - i}` });
+    const piece = gameState.board[i][j];
+    if (piece && piece[0] === gameState.game.turn()) {
+      setGameState((prevState) => ({
+        ...prevState,
+        draggedPiece: { piece, i, j, square: `${String.fromCharCode(97 + j)}${8 - i}` },
+        error: '',
+      }));
     } else {
       e.preventDefault();
     }
@@ -131,21 +258,22 @@ const Chessboard = () => {
 
   const handleDrop = (e, i, j) => {
     e.preventDefault();
-    if (isGameOver) return;
+    if (gameState.isGameOver) return;
+    if (!gameState.isPlayerTurn) return;
 
-    if (draggedPiece) {
+    if (gameState.draggedPiece) {
       const to = { i, j, square: `${String.fromCharCode(97 + j)}${8 - i}` };
-      handleMove(draggedPiece, to);
+      handleMove(gameState.draggedPiece, to);
     }
   };
 
   const createBoard = () => {
-    return board.map((row, i) => (
+    return gameState.board.map((row, i) => (
       <div key={i} className="row">
         {row.map((piece, j) => (
           <div
             key={`${i}-${j}`}
-            className={`square ${(i + j) % 2 === 0 ? 'white' : 'black'} ${selectedPiece && selectedPiece.i === i && selectedPiece.j === j ? 'selected' : ''}`}
+            className={`square ${(i + j) % 2 === 0 ? 'white' : 'black'} ${gameState.selectedPiece && gameState.selectedPiece.i === i && gameState.selectedPiece.j === j ? 'selected' : ''}`}
             onClick={() => handleSquareClick(i, j)}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, i, j)}
@@ -154,7 +282,7 @@ const Chessboard = () => {
               <img
                 src={`images/${piece}.png`}
                 alt={piece}
-                draggable={!isGameOver}
+                draggable={!gameState.isGameOver}
                 onDragStart={(e) => handleDragStart(e, i, j)}
               />
             )}
@@ -166,41 +294,60 @@ const Chessboard = () => {
 
   const moveToStart = () => {
     const newGame = new Chess();
-    setGame(newGame);
-    setCurrentMoveIndex(-1);
-    setIsGameOver(false);
+    setGameState({
+      game: newGame,
+      board: initialBoard,
+      selectedPiece: null,
+      moveHistory: [],
+      currentMoveIndex: -1,
+      error: '',
+      draggedPiece: null,
+      isGameOver: false,
+      stockfishLevel: 1,
+      isPlayerTurn: true
+    });
   };
 
   const moveToPrevious = () => {
-    if (currentMoveIndex > -1) {
+    if (gameState.currentMoveIndex > -1) {
       const newGame = new Chess();
-      for (let i = 0; i < currentMoveIndex; i++) {
-        newGame.move(moveHistory[i].san);
+      for (let i = 0; i <= gameState.currentMoveIndex - 1; i++) {
+        newGame.move(gameState.moveHistory[i].san);
       }
-      setGame(newGame);
-      setCurrentMoveIndex(currentMoveIndex - 1);
-      setIsGameOver(false);
+      setGameState({
+        ...gameState,
+        game: newGame,
+        currentMoveIndex: gameState.currentMoveIndex - 1
+      });
+      checkGameOver();
     }
   };
 
   const moveToNext = () => {
-    if (currentMoveIndex < moveHistory.length - 1) {
+    if (gameState.currentMoveIndex < gameState.moveHistory.length - 1) {
       const newGame = new Chess();
-      for (let i = 0; i <= currentMoveIndex + 1; i++) {
-        newGame.move(moveHistory[i].san);
+      for (let i = 0; i <= gameState.currentMoveIndex + 1; i++) {
+        newGame.move(gameState.moveHistory[i].san);
       }
-      setGame(newGame);
-      setCurrentMoveIndex(currentMoveIndex + 1);
+      setGameState({
+        ...gameState,
+        game: newGame,
+        currentMoveIndex: gameState.currentMoveIndex + 1
+      });
       checkGameOver();
     }
   };
 
   const moveToEnd = () => {
     const newGame = new Chess();
-    moveHistory.forEach(move => newGame.move(move.san));
-    setGame(newGame);
-    setCurrentMoveIndex(moveHistory.length - 1);
-    checkGameOver();
+    for (let i = 0; i <= gameState.moveHistory.length - 1; i++) {
+      newGame.move(gameState.moveHistory[i].san);
+    }
+    setGameState({
+      ...gameState,
+      game: newGame,
+      currentMoveIndex: gameState.moveHistory.length - 1
+    });
   };
 
   const renderPiece = (piece) => {
@@ -216,48 +363,54 @@ const Chessboard = () => {
       <div className="chessboard">{createBoard()}</div>
       <div className='right-panel'>
         <div className="controls">{Controls()}</div>
-        {error && <div className="error-message">{error}</div>}
-        {isGameOver && <div className="game-over-message">Game Over</div>}
+        {gameState.error && <div className="error-message">{gameState.error}</div>}
+        {gameState.isGameOver && <div className="game-over-message">Game Over</div>}
         <div className="move-history">
           <div className="move-navigation">
-            <button onClick={moveToStart} disabled={currentMoveIndex === -1}>{'<<'}</button>
-            <button onClick={moveToPrevious} disabled={currentMoveIndex === -1}>{'<'}</button>
-            <button onClick={moveToNext} disabled={currentMoveIndex === moveHistory.length - 1}>{'>'}</button>
-            <button onClick={moveToEnd} disabled={currentMoveIndex === moveHistory.length - 1}>{'>>'}</button>
+            <button onClick={moveToStart} disabled={gameState.currentMoveIndex === -1}>{'<<'}</button>
+            <button onClick={moveToPrevious} disabled={gameState.currentMoveIndex === -1}>{'<'}</button>
+            <button onClick={moveToNext} disabled={gameState.currentMoveIndex === gameState.moveHistory.length - 1}>{'>'}</button>
+            <button onClick={moveToEnd} disabled={gameState.currentMoveIndex === gameState.moveHistory.length - 1}>{'>>'}</button>
           </div>
-          {Array.from({ length: Math.ceil(moveHistory.length / 2) }, (_, i) => (
+          {Array.from({ length: Math.ceil(gameState.moveHistory.length / 2) }, (_, i) => (
             <div key={i} className="move-pair">
               <span className="move-number">{i + 1}.</span>
               <span 
-                className={`move white-move ${2 * i === currentMoveIndex ? 'current-move' : ''}`}
+                className={`move white-move ${2 * i === gameState.currentMoveIndex ? 'current-move' : ''}`}
                 onClick={() => {
                   const newGame = new Chess();
                   for (let j = 0; j <= 2 * i; j++) {
-                    newGame.move(moveHistory[j].san);
+                    newGame.move(gameState.moveHistory[j].san);
                   }
-                  setGame(newGame);
-                  setCurrentMoveIndex(2 * i);
-                  setIsGameOver(false);
+                  setGameState({
+                    ...gameState,
+                    game: newGame,
+                    currentMoveIndex: 2 * i
+                  });
+                  checkGameOver();
                 }}
               >
-                {renderPiece(moveHistory[2 * i]?.piece)}
-                {moveHistory[2 * i]?.san}
+                {renderPiece(gameState.moveHistory[2 * i]?.piece)}
+                {gameState.moveHistory[2 * i]?.san}
               </span>
-              {moveHistory[2 * i + 1] && (
+              {gameState.moveHistory[2 * i + 1] && (
                 <span 
-                  className={`move black-move ${2 * i + 1 === currentMoveIndex ? 'current-move' : ''}`}
+                  className={`move black-move ${2 * i + 1 === gameState.currentMoveIndex ? 'current-move' : ''}`}
                   onClick={() => {
                     const newGame = new Chess();
                     for (let j = 0; j <= 2 * i + 1; j++) {
-                      newGame.move(moveHistory[j].san);
+                      newGame.move(gameState.moveHistory[j].san);
                     }
-                    setGame(newGame);
-                    setCurrentMoveIndex(2 * i + 1);
+                    setGameState({
+                      ...gameState,
+                      game: newGame,
+                      currentMoveIndex: 2 * i + 1
+                    });
                     checkGameOver();
                   }}
                 >
-                  {renderPiece(moveHistory[2 * i + 1]?.piece)}
-                  {moveHistory[2 * i + 1]?.san}
+                  {renderPiece(gameState.moveHistory[2 * i + 1]?.piece)}
+                  {gameState.moveHistory[2 * i + 1]?.san}
                 </span>
               )}
             </div>
