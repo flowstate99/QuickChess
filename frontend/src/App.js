@@ -1,24 +1,44 @@
-import React from 'react';
-import {Route, Routes } from 'react-router-dom';
-import LandingPage from './components/LandingPage';
-import HomePage from './components/HomePage';
-import GamePage from './components/GamePage';
-import Login from './components/Login';
-import SignUp from './components/SignUp';
+import React, { useState, useEffect } from 'react';
 import './App.css';
+import Chessboard from './components/Chessboard';
 
-const App = () => {
+function App() {
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    if (darkMode) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+  }, [darkMode]);
+
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+  };
+
   return (
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/home" element={<HomePage />} />
-        <Route path="/game" element={<GamePage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<SignUp />} />
-      </Routes>
+    <div className="App">
+      <nav className="navbar">
+        <h1 className="website-title">QuickChess</h1>
+        <div className="dark-mode-container">
+          <label className="dark-mode-label">
+            <input
+              type="checkbox"
+              checked={darkMode}
+              onChange={toggleDarkMode}
+              className="dark-mode-checkbox"
+            />
+            <span className="dark-mode-slider"></span>
+          </label>
+          <span className="dark-mode-text">{darkMode ? 'Dark Mode' : 'Light Mode'}</span>
+        </div>
+      </nav>
+      <div className="content-wrapper">
+        <Chessboard />
+      </div>
+    </div>
   );
-};
+}
 
 export default App;
-
-
