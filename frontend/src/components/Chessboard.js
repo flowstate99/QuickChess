@@ -26,7 +26,8 @@ const Chessboard = () => {
     stockfishLevel: 1,
     isPlayerTurn: true,
     playerColor: Math.random() < 0.5 ? 'w' : 'b',
-    isBoardFlipped: false
+    isBoardFlipped: false,
+    isGameStarted: false
   })
 
   const stockfishWorker = useRef(null)
@@ -41,9 +42,6 @@ const Chessboard = () => {
         console.log('Stockfish level set to:', gameState.stockfishLevel);
         stockfishWorker.current.onmessage = handleStockfishMessage
 
-        if (gameState.playerColor === 'b') {
-          makeStockfishMove();
-        }
         console.log('Stockfish worker initialized');
         return () => {
           if (stockfishWorker.current) {
@@ -58,6 +56,12 @@ const Chessboard = () => {
     }
     // eslint-disable-next-line
   }, []);
+
+  useEffect(() => {
+    if (gameState.playerColor === 'b' && gameState.isGameStarted) {
+      makeStockfishMove();
+    }
+  }, [gameState.isGameStarted])
   
   useEffect(() => {
     setGameState((prevState) => ({
@@ -159,7 +163,7 @@ const Chessboard = () => {
 }, [gameState.game, gameState.stockfishLevel]);
 
 const handleMove = useCallback((from, to) => {
-  if (gameState.isGameOver || !gameState.isPlayerTurn) return;
+  if (gameState.isGameOver || !gameState.isPlayerTurn || !gameState.isGameStarted) return;
 
   try {
     const moveDetails = {
@@ -189,7 +193,7 @@ const handleMove = useCallback((from, to) => {
       draggedPiece: null,
     }));
   }
-}, [gameState.isGameOver, gameState.isPlayerTurn, gameState.currentMoveIndex, gameState.game, gameState.moveHistory, updateGameState]);
+}, [gameState.isGameOver, gameState.isPlayerTurn, gameState.currentMoveIndex, gameState.game, gameState.moveHistory, updateGameState, gameState.isGameStarted]);
 
 
 
@@ -212,7 +216,10 @@ const handleMove = useCallback((from, to) => {
             stockfishLevel: gameState.stockfishLevel,
             currentMoveIndex: -1,
             isGameOver: false,
-            isPlayerTurn: true
+            isPlayerTurn: true,
+            playerColor: Math.random() < 0.5 ? 'w' : 'b',
+            isBoardFlipped: gameState.playerColor === 'b',
+            isGameStarted: true,
           })
         }}>New Game</button>
         <button
@@ -441,10 +448,8 @@ const handleMove = useCallback((from, to) => {
       <div className='right-panel'>
         <div className="controls">{Controls()}</div>
         {gameState.error && <div className="error-message">{gameState.error}</div>}
+        {!gameState.isGameStarted && <div className="game-start-message">Click New Game to start</div>}
         {gameState.isGameOver && <div className="game-over-message">Game Over</div>}
-        <div className='player-info'>
-          You are playing as {gameState.playerColor === 'w' ? 'White' : 'Black'}
-          </div>
         <div className="move-history">
           <div className="move-navigation">
             <button onClick={moveToStart} disabled={gameState.currentMoveIndex === -1}>{'<<'}</button>
