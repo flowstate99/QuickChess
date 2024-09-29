@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback} from 'react';
 import { Chess } from 'chess.js';
 import './Chessboard.css';
 
@@ -24,7 +24,9 @@ const Chessboard = () => {
     draggedPiece: null,
     isGameOver: false,
     stockfishLevel: 1,
-    isPlayerTurn: true
+    isPlayerTurn: true,
+    playerColor: Math.random() < 0.5 ? 'w' : 'b',
+    isBoardFlipped: false
   })
 
   const stockfishWorker = useRef(null)
@@ -33,8 +35,15 @@ const Chessboard = () => {
     try {
       if (!stockfishWorker.current) {
         stockfishWorker.current = new Worker('stockfishWorker.js');
+        stockfishWorker.current.postMessage('uci');
+        stockfishWorker.current.postMessage('ucinewgame');
+        stockfishWorker.current.postMessage(`setoption name Skill Level value ${gameState.stockfishLevel}`);
+        console.log('Stockfish level set to:', gameState.stockfishLevel);
         stockfishWorker.current.onmessage = handleStockfishMessage
-    
+
+        if (gameState.playerColor === 'b') {
+          makeStockfishMove();
+        }
         console.log('Stockfish worker initialized');
         return () => {
           if (stockfishWorker.current) {
@@ -48,7 +57,14 @@ const Chessboard = () => {
       console.error('Error initializing Stockfish worker:', error);
     }
     // eslint-disable-next-line
-}, []);
+  }, []);
+  
+  useEffect(() => {
+    setGameState((prevState) => ({
+      ...prevState,
+      isBoardFlipped: prevState.playerColor === 'b'
+    }));
+  }, []);
 
 
   const updateGameState = useCallback((updates) => {
@@ -77,7 +93,7 @@ const Chessboard = () => {
         if (bestMove) {
           const from = bestMove.slice(0, 2); // e.g., "e2"
           const to = bestMove.slice(2, 4);   // e.g., "e4"
-
+  
           // Check if the move is valid for the current game state
           const newGame = new Chess(gameState.game.fen());
           
@@ -85,22 +101,24 @@ const Chessboard = () => {
           const move = newGame.move({
             from: from,
             to: to,
-            promotion: (from[1] === '7' && to[1] === '8') || (from[1] === '2' && to[1] === '1') ? 'q' : undefined // Add promotion only if needed
+            promotion: (from[1] === '7' && to[1] === '8') || (from[1] === '2' && to[1] === '1') ? 'q' : undefined // Promote to queen by default
           });
-
+  
           if (move) {
             updateGameState({ 
-                game: newGame, 
-                isPlayerTurn: true // Switch back to player's turn
+              game: newGame, 
+              moveHistory: [...gameState.moveHistory, move],
+              currentMoveIndex: gameState.currentMoveIndex + 1,
+              isPlayerTurn: true // Switch back to player's turn
             });
             console.log('Stockfish move applied:', move.san);
           } else {
-              console.error('Failed to apply Stockfish move:', bestMove);
+            console.error('Failed to apply Stockfish move:', bestMove);
           }
         }
       }
-  }
-}, [gameState.game, updateGameState]);
+    }
+  }, [gameState.game, gameState.moveHistory, gameState.currentMoveIndex, updateGameState]);
 
 
   useEffect(() => {
@@ -111,66 +129,69 @@ const Chessboard = () => {
 
   useEffect(() => {
     if (!gameState.isPlayerTurn && !gameState.isGameOver) {
-      makeStockfishMove()
+      setTimeout(makeStockfishMove, 1500);
     }
   })
 
   const makeStockfishMove = useCallback(() => {
     try {
-      if (stockfishWorker.current) {
-        if (typeof stockfishWorker.current.postMessage === 'function') {
-          try {
-            const fen = gameState.game.fen();
-            stockfishWorker.current.postMessage(`position fen ${fen}`);
-            
-            const depth = gameState.stockfishLevel;
-            stockfishWorker.current.postMessage(`go depth ${depth}`);
-          } catch (error) {
-          }
+        if (stockfishWorker.current) {
+            if (typeof stockfishWorker.current.postMessage === 'function') {
+                try {
+                    const fen = gameState.game.fen();
+                    stockfishWorker.current.postMessage(`position fen ${fen}`);
+                    
+                    // Adjust depth based on stockfishLevel
+                    const depth = gameState.stockfishLevel * 2; // Level 1 = depth 2, Level 10 = depth 20
+                    stockfishWorker.current.postMessage(`go depth ${depth}`);
+                } catch (error) {
+                    console.error('Error posting message to Stockfish:', error);
+                }
+            } else {
+                console.error('postMessage is not a function on stockfishWorker.current');
+            }
         } else {
-          console.error('postMessage is not a function on stockfishWorker.current');
+            console.error('Stockfish worker is not initialized');
         }
-      } else {
-        console.error('Stockfish worker is not initialized');
-      }
     } catch (error) {
-      console.error('Error making Stockfish move:', error);
+        console.error('Error making Stockfish move:', error);
     }
-  }, [gameState.game, gameState.stockfishLevel]);
+}, [gameState.game, gameState.stockfishLevel]);
 
-  const handleMove = useCallback((from, to) => {
-    if (gameState.isGameOver || !gameState.isPlayerTurn) return;
+const handleMove = useCallback((from, to) => {
+  if (gameState.isGameOver || !gameState.isPlayerTurn) return;
 
-    try {
-      const moveDetails = {
-        from: from.square,
-        to: to.square,
-        promotion: (from[1] === '7' && to[1] === '8') || (from[1] === '2' && to[1] === '1') ? 'q' : undefined
-      };
-      const newGame = new Chess(gameState.game.fen());
-      const move = newGame.move(moveDetails);
-      updateGameState({
-        game: newGame,
-        moveHistory: [...gameState.moveHistory.slice(0, gameState.currentMoveIndex + 1), move],
-        currentMoveIndex: gameState.currentMoveIndex + 1,
-        error: '',
-        isPlayerTurn: false
-      })
-      console.log('Move made:', move.san);
-      // makeStockfishMove();
-      } catch (error) {
-      setGameState((prevState) => ({
-        ...prevState,
-        error: 'Invalid move. Please try again.',
-      }));
-    } finally {
-      setGameState((prevState) => ({
-        ...prevState,
-        selectedPiece: null,
-        draggedPiece: null,
-      }));
-    }
-  }, [gameState.isGameOver, gameState.isPlayerTurn, gameState.currentMoveIndex, gameState.game, gameState.moveHistory, updateGameState]);
+  try {
+    const moveDetails = {
+      from: from.square,
+      to: to.square,
+      promotion: (from.square[1] === '7' && to.square[1] === '8') || (from.square[1] === '2' && to.square[1] === '1') ? 'q' : undefined // Promote to queen by default
+    };
+    const newGame = new Chess(gameState.game.fen());
+    const move = newGame.move(moveDetails);
+    updateGameState({
+      game: newGame,
+      moveHistory: [...gameState.moveHistory.slice(0, gameState.currentMoveIndex + 1), move],
+      currentMoveIndex: gameState.currentMoveIndex + 1,
+      error: '',
+      isPlayerTurn: false
+    });
+    console.log('Move made:', move.san);
+  } catch (error) {
+    setGameState((prevState) => ({
+      ...prevState,
+      error: 'Invalid move. Please try again.',
+    }));
+  } finally {
+    setGameState((prevState) => ({
+      ...prevState,
+      selectedPiece: null,
+      draggedPiece: null,
+    }));
+  }
+}, [gameState.isGameOver, gameState.isPlayerTurn, gameState.currentMoveIndex, gameState.game, gameState.moveHistory, updateGameState]);
+
+
 
   const Controls = () => {
     return (
@@ -188,6 +209,7 @@ const Chessboard = () => {
           updateGameState({
             game: new Chess(),
             moveHistory: [],
+            stockfishLevel: gameState.stockfishLevel,
             currentMoveIndex: -1,
             isGameOver: false,
             isPlayerTurn: true
@@ -236,17 +258,20 @@ const Chessboard = () => {
       ...gameState,
       game: newGame,
       moveHistory: gameState.moveHistory.slice(0, gameState.currentMoveIndex - 1),
-      currentMoveIndex: gameState.currentMoveIndex - 2
+      currentMoveIndex: gameState.currentMoveIndex - 2,
+      board: newGame.board().map(row => row.map(square => square ? `${square.color}${square.type}` : '')),
+      isPlayerTurn: true // Give turn to the requester to play
     });
   };
 
 
   const handleSquareClick = (i, j) => {
-    if (gameState.isGameOver) return;
-    if (!gameState.isPlayerTurn) return;
+    if (gameState.isGameOver || !gameState.isPlayerTurn) return;
 
-    const clickedPiece = gameState.board[i][j];
-    const square = `${String.fromCharCode(97 + j)}${8 - i}`;
+    const actualI = gameState.isBoardFlipped ? 7 - i : i;
+    const actualJ = gameState.isBoardFlipped ? 7 - j : j;
+    const clickedPiece = gameState.board[actualI][actualJ];
+    const square = `${String.fromCharCode(97 + actualJ)}${8 - actualI}`;
     
     if (gameState.selectedPiece) {
       if (clickedPiece && clickedPiece[0] === gameState.game.turn()) {
@@ -275,20 +300,18 @@ const Chessboard = () => {
   };
 
   const handleDragStart = (e, i, j) => {
-    if (gameState.isGameOver) {
-      e.preventDefault();
-      return;
-    }
-    if (!gameState.isPlayerTurn) {
+    if (gameState.isGameOver || !gameState.isPlayerTurn) {
       e.preventDefault();
       return;
     }
 
-    const piece = gameState.board[i][j];
+    const actualI = gameState.isBoardFlipped ? 7 - i : i;
+    const actualJ = gameState.isBoardFlipped ? 7 - j : j;
+    const piece = gameState.board[actualI][actualJ];
     if (piece && piece[0] === gameState.game.turn()) {
       setGameState((prevState) => ({
         ...prevState,
-        draggedPiece: { piece, i, j, square: `${String.fromCharCode(97 + j)}${8 - i}` },
+        draggedPiece: { piece, i: actualI, j: actualJ, square: `${String.fromCharCode(97 + actualJ)}${8 - actualI}` },
         error: '',
       }));
     } else {
@@ -302,17 +325,22 @@ const Chessboard = () => {
 
   const handleDrop = (e, i, j) => {
     e.preventDefault();
-    if (gameState.isGameOver) return;
-    if (!gameState.isPlayerTurn) return;
+    if (gameState.isGameOver || !gameState.isPlayerTurn) return;
 
     if (gameState.draggedPiece) {
-      const to = { i, j, square: `${String.fromCharCode(97 + j)}${8 - i}` };
+      const actualI = gameState.isBoardFlipped ? 7 - i : i;
+      const actualJ = gameState.isBoardFlipped ? 7 - j : j;
+      const to = { i: actualI, j:actualJ, square: `${String.fromCharCode(97 + actualJ)}${8 - actualI}` };
       handleMove(gameState.draggedPiece, to);
     }
   };
 
   const createBoard = () => {
-    return gameState.board.map((row, i) => (
+    let boardToRender = gameState.board;
+    if (gameState.isBoardFlipped) {
+      boardToRender = [...boardToRender].reverse().map(row => [...row].reverse());
+    }
+    return boardToRender.map((row, i) => (
       <div key={i} className="row">
         {row.map((piece, j) => (
           <div
@@ -337,32 +365,33 @@ const Chessboard = () => {
   };
 
   const moveToStart = () => {
+    if (gameState.currentMoveIndex === -1) return;
     const newGame = new Chess();
-    setGameState({
+    setGameState((prevState) => ({
+      ...prevState,
       game: newGame,
       board: initialBoard,
       selectedPiece: null,
-      moveHistory: [],
       currentMoveIndex: -1,
       error: '',
       draggedPiece: null,
       isGameOver: false,
-      stockfishLevel: 1,
       isPlayerTurn: true
-    });
+    }));
   };
 
   const moveToPrevious = () => {
-    if (gameState.currentMoveIndex > -1) {
+    if (gameState.currentMoveIndex >= 0) {
       const newGame = new Chess();
-      for (let i = 0; i <= gameState.currentMoveIndex - 1; i++) {
+      for (let i = 0; i < gameState.currentMoveIndex; i++) {
         newGame.move(gameState.moveHistory[i].san);
       }
-      setGameState({
-        ...gameState,
+      setGameState((prevState) => ({
+        ...prevState,
         game: newGame,
-        currentMoveIndex: gameState.currentMoveIndex - 1
-      });
+        currentMoveIndex: prevState.currentMoveIndex - 1,
+        board: newGame.board().map(row => row.map(square => square ? `${square.color}${square.type}` : ''))
+      }));
       checkGameOver();
     }
   };
@@ -373,25 +402,29 @@ const Chessboard = () => {
       for (let i = 0; i <= gameState.currentMoveIndex + 1; i++) {
         newGame.move(gameState.moveHistory[i].san);
       }
-      setGameState({
-        ...gameState,
+      setGameState((prevState) => ({
+        ...prevState,
         game: newGame,
-        currentMoveIndex: gameState.currentMoveIndex + 1
-      });
+        currentMoveIndex: prevState.currentMoveIndex + 1,
+        board: newGame.board().map(row => row.map(square => square ? `${square.color}${square.type}` : ''))
+      }));
       checkGameOver();
     }
   };
 
   const moveToEnd = () => {
+    if (gameState.currentMoveIndex === gameState.moveHistory.length - 1) return;
     const newGame = new Chess();
-    for (let i = 0; i <= gameState.moveHistory.length - 1; i++) {
+    for (let i = 0; i < gameState.moveHistory.length; i++) {
       newGame.move(gameState.moveHistory[i].san);
     }
     setGameState({
       ...gameState,
       game: newGame,
-      currentMoveIndex: gameState.moveHistory.length - 1
+      currentMoveIndex: gameState.moveHistory.length - 1,
+      board: newGame.board().map(row => row.map(square => square ? `${square.color}${square.type}` : ''))
     });
+    checkGameOver();
   };
 
   const renderPiece = (piece) => {
@@ -409,6 +442,9 @@ const Chessboard = () => {
         <div className="controls">{Controls()}</div>
         {gameState.error && <div className="error-message">{gameState.error}</div>}
         {gameState.isGameOver && <div className="game-over-message">Game Over</div>}
+        <div className='player-info'>
+          You are playing as {gameState.playerColor === 'w' ? 'White' : 'Black'}
+          </div>
         <div className="move-history">
           <div className="move-navigation">
             <button onClick={moveToStart} disabled={gameState.currentMoveIndex === -1}>{'<<'}</button>

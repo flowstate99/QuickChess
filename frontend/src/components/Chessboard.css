@@ -160,6 +160,24 @@
   margin: 0 5px;
 }
 
+.level-selector {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.level-selector label {
+  margin-right: 10px;
+  font-size: 16px;
+}
+
+.level-selector select {
+  padding: 5px;
+  font-size: 16px;
+  border: 1px solid #404040;
+  border-radius: 3px;
+}
+
 @media (max-width: 767px) {
   .chessboard-container {
     flex-direction: column;
