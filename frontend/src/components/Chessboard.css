@@ -56,6 +56,9 @@
   height: 100%;
 }
 
+.highlight {
+  box-shadow: rgb(168, 168, 253) 0px 0px 0px 4px inset;
+}
 .white {
   background-color: #f0d9b5;
 }
@@ -83,6 +86,7 @@
   margin-bottom: 20px;
   display: flex;
   justify-content: space-between;
+  
 }
 
 .controls button,
@@ -209,5 +213,17 @@
   .right-panel {
     flex: 0 0 300px;
     margin-left: 20px;
+  }
+}
+
+@media (max-width: 400px) {
+  .container {
+    display: flex;
+    flex-direction: wrap;
+    margin-bottom: 20px;
+    margin-top: 20px;
+  }
+  .move-history {
+    max-height: 200px;
   }
 }
