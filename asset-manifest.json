@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/QuickChess/static/css/main.e29e960b.css",
+    "main.js": "/QuickChess/static/js/main.5b92d888.js",
+    "index.html": "/QuickChess/index.html",
+    "main.e29e960b.css.map": "/QuickChess/static/css/main.e29e960b.css.map",
+    "main.5b92d888.js.map": "/QuickChess/static/js/main.5b92d888.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.e29e960b.css",
+    "static/js/main.5b92d888.js"
+  ]
+}
