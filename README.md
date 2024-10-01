@@ -1,1 +1,1 @@
-# ChessCom-Clone
+# QuickChess
