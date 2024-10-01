@@ -2,7 +2,6 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
   margin: 0;
   padding: 0;
   background-color: #f0f0f0;
@@ -15,10 +14,10 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: center;
   width: 100%;
   max-width: 1200px;
-  padding: 20px;
+  padding-top: 0px;
+  padding-bottom: 0px;
   box-sizing: border-box;
   transition: background-color 0.3s ease;
 }
@@ -36,7 +35,8 @@ body {
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  padding: 10px 0;
+  padding-top: 0px;
+  padding-bottom: 0px;
 }
 
 .dark-mode-container {
@@ -47,14 +47,8 @@ body {
 .dark-mode-label {
   position: relative;
   display: inline-block;
-  width: 60px;
-  height: 34px;
-}
-
-.dark-mode-checkbox {
-  opacity: 0;
-  width: 0;
-  height: 0;
+  width: 40px; /* Reduced width */
+  height: 20px; /* Reduced height */
 }
 
 .dark-mode-slider {
@@ -66,28 +60,25 @@ body {
   bottom: 0;
   background-color: #ccc;
   transition: .4s;
-  border-radius: 34px;
+  border-radius: 20px; /* Adjusted border-radius */
 }
 
 .dark-mode-slider:before {
   position: absolute;
   content: "";
-  height: 26px;
-  width: 26px;
-  left: 4px;
-  bottom: 4px;
-  background-color: white;
+  height: 16px; /* Reduced height */
+  width: 16px; /* Reduced width */
+  left: 2px; /* Adjusted position */
+  bottom: 2px; /* Adjusted position */
+  background-color:rgb(51, 122, 255);
   transition: .4s;
   border-radius: 50%;
 }
 
-.dark-mode-checkbox:checked + .dark-mode-slider {
-  background-color: #2196F3;
+.dark-mode-checkbox:checked + .dark-mode-slider:before {
+  transform: translateX(20px); /* Adjusted translation */
 }
 
-.dark-mode-checkbox:checked + .dark-mode-slider:before {
-  transform: translateX(26px);
-}
 
 .dark-mode-text {
   margin-left: 10px;
@@ -117,7 +108,7 @@ body.dark-mode {
   .App {
     flex-direction: column;
     align-items: center;
-    padding: 50px;
+    padding: 10px;
   }
 
   .chessboard {

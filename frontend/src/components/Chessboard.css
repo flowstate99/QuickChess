@@ -18,6 +18,7 @@
   aspect-ratio: 1 / 1;
   border: 2px solid #404040;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+  margin-bottom: 50px;
 }
 
 .right-panel {
@@ -182,7 +183,7 @@
   border-radius: 3px;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 812px) {
   .container {
     margin: auto;
   }
@@ -203,7 +204,7 @@
   }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 813px) {
   .container {
     display: flex;
     flex-direction: wrap;

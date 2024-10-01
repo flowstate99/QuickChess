@@ -31,7 +31,7 @@ function App() {
             />
             <span className="dark-mode-slider"></span>
           </label>
-          <span className="dark-mode-text">{darkMode ? 'Dark Mode' : 'Light Mode'}</span>
+          <span className="dark-mode-text">{darkMode ? '🌙' : '☀️'}</span>
         </div>
       </nav>
       <div className="content-wrapper">
