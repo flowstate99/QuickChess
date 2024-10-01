@@ -102,6 +102,17 @@ body {
   max-height: 600px;
 }
 
+
+.dark-mode {
+  background-color: #1e1e1e;
+  color: #ffffff;
+}
+
+body.dark-mode {
+  background-color: #1e1e1e;
+  color: #ffffff;
+}
+
 @media (max-width: 768px) {
   .App {
     flex-direction: column;
@@ -115,7 +126,6 @@ body {
   }
 
   .navbar {
-    flex-direction: column;
     align-items: center;
   }
 
@@ -124,12 +134,23 @@ body {
   }
 }
 
-.dark-mode {
-  background-color: #1e1e1e;
-  color: #ffffff;
-}
+@media (min-width: 768px) {
+  .App {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px;
+  }
 
-body.dark-mode {
-  background-color: #1e1e1e;
-  color: #ffffff;
+  .chessboard {
+    max-width: 50vmin;
+    height: 50vmin;
+  }
+
+  .navbar {
+    align-items: center;
+  }
+
+  .dark-mode-container {
+    margin-top: 0;
+  }
 }

@@ -27,7 +27,8 @@ const Chessboard = () => {
     isPlayerTurn: true,
     playerColor: Math.random() < 0.5 ? 'w' : 'b',
     isBoardFlipped: false,
-    isGameStarted: false
+    isGameStarted: false,
+    isThreeFoldRepetition: false,
   })
 
   const stockfishWorker = useRef(null)
@@ -223,6 +224,23 @@ const handleMove = useCallback((from, to) => {
   }
 }, [gameState.isGameOver, gameState.isPlayerTurn, gameState.currentMoveIndex, gameState.game, gameState.moveHistory, updateGameState, gameState.isGameStarted]);
 
+  // handle threefold repetition
+  useEffect(() => {
+    const moveHistory = gameState.moveHistory;
+    const lastMove = moveHistory[moveHistory.length - 1];
+    if (lastMove) {
+      const fen = gameState.game.fen();
+      const repetitions = moveHistory.filter(move => move.fen === fen).length;
+      if (repetitions >= 3) {
+        setGameState((prevState) => ({
+          ...prevState,
+          isThreeFoldRepetition: true,
+          isGameOver: true,
+          error: 'Game over. Threefold repetition.'
+        }));
+      }
+    }
+  }, [gameState.game, gameState.moveHistory]);
 
 
   const Controls = () => {
