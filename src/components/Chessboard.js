@@ -29,6 +29,7 @@ const Chessboard = () => {
     isBoardFlipped: false,
     isGameStarted: false,
     isThreeFoldRepetition: false,
+    validMoves: [],
   })
 
   const stockfishWorker = useRef(null)
@@ -106,8 +107,6 @@ const Chessboard = () => {
       isGameOver: prevState.game.isGameOver()
     }))
   };
-
-  // handle highlight most recent move
 
 
   // handle StockfishMessage
@@ -207,7 +206,8 @@ const handleMove = useCallback((from, to) => {
       currentMoveIndex: gameState.currentMoveIndex + 1,
       error: '',
       isPlayerTurn: false,
-      lastMove: { from: from.square, to: to.square }
+      lastMove: { from: from.square, to: to.square },
+      validMoves: []
     });
     console.log('Move made:', move.san);
   } catch (error) {
@@ -302,10 +302,14 @@ const handleMove = useCallback((from, to) => {
       moveHistory: gameState.moveHistory.slice(0, gameState.currentMoveIndex - 1),
       currentMoveIndex: gameState.currentMoveIndex - 2,
       board: newGame.board().map(row => row.map(square => square ? `${square.color}${square.type}` : '')),
-      isPlayerTurn: true // Give turn to the requester to play
+      isPlayerTurn: true
     });
   };
 
+  const getValidMoves = useCallback((square) => {
+    const moves = gameState.game.moves({ square, verbose: true });
+    return moves.map(move => move.to);
+  }, [gameState.game]);
 
   const handleSquareClick = (i, j) => {
     if (gameState.isGameOver || !gameState.isPlayerTurn) return;
@@ -318,25 +322,30 @@ const handleMove = useCallback((from, to) => {
     if (gameState.selectedPiece) {
       if (clickedPiece && clickedPiece[0] === gameState.game.turn()) {
         // If clicking on another piece of the same color, switch the selected piece
+        const validMoves = getValidMoves(square);
         setGameState((prevState) => ({
           ...prevState,
-          selectedPiece: { piece: clickedPiece, i, j, square },
+          selectedPiece: { piece: clickedPiece, i: actualI, j: actualJ, square },
           error: '',
+          validMoves: validMoves
         }));
       } else {
         // Otherwise, attempt to make a move
-        handleMove(gameState.selectedPiece, { i, j, square });
+        handleMove(gameState.selectedPiece, { i: actualI, j: actualJ, square });
       }
     } else if (clickedPiece && clickedPiece[0] === gameState.game.turn()) {
+      const validMoves = getValidMoves(square);
       setGameState((prevState) => ({
         ...prevState,
-        selectedPiece: { piece: clickedPiece, i, j, square },
+        selectedPiece: { piece: clickedPiece, i: actualI, j: actualJ, square },
+        validMoves: validMoves,
         error: '',
       }));
     } else {
       setGameState((prevState) => ({
         ...prevState,
         error: 'Please select a piece to move.',
+        validMoves: []
       }));
     }
   };
@@ -350,10 +359,12 @@ const handleMove = useCallback((from, to) => {
     const actualI = gameState.isBoardFlipped ? 7 - i : i;
     const actualJ = gameState.isBoardFlipped ? 7 - j : j;
     const piece = gameState.board[actualI][actualJ];
+    const square = `${String.fromCharCode(97 + actualJ)}${8 - actualI}`;
     if (piece && piece[0] === gameState.game.turn()) {
       setGameState((prevState) => ({
         ...prevState,
-        draggedPiece: { piece, i: actualI, j: actualJ, square: `${String.fromCharCode(97 + actualJ)}${8 - actualI}` },
+        draggedPiece: { piece, i: actualI, j: actualJ, square: square },
+        validMoves: getValidMoves(square),
         error: '',
       }));
     } else {
@@ -372,8 +383,17 @@ const handleMove = useCallback((from, to) => {
     if (gameState.draggedPiece) {
       const actualI = gameState.isBoardFlipped ? 7 - i : i;
       const actualJ = gameState.isBoardFlipped ? 7 - j : j;
-      const to = { i: actualI, j:actualJ, square: `${String.fromCharCode(97 + actualJ)}${8 - actualI}` };
-      handleMove(gameState.draggedPiece, to);
+      const to = { i: actualI, j: actualJ, square: `${String.fromCharCode(97 + actualJ)}${8 - actualI}` };
+      
+      if (gameState.draggedPiece.i === actualI && gameState.draggedPiece.j === actualJ) {
+        setGameState((prevState) => ({
+          ...prevState,
+          validMoves: [],
+          draggedPiece: null,
+        }));
+      } else {
+        handleMove(gameState.draggedPiece, to);
+      }
     }
   };
 
@@ -385,14 +405,18 @@ const handleMove = useCallback((from, to) => {
     return boardToRender.map((row, i) => (
       <div key={i} className="row">
         {row.map((piece, j) => {
-          const square = `${String.fromCharCode(97 + (gameState.isBoardFlipped ? 7 - j : j))}${8 - (gameState.isBoardFlipped ? 7 - i : i)}`;
+          const actualI = gameState.isBoardFlipped ? 7 - i : i;
+          const actualJ = gameState.isBoardFlipped ? 7 - j : j;
+          const square = `${String.fromCharCode(97 + actualJ)}${8 - actualI}`;
           const isLastMoveSquare = gameState.lastMove && (gameState.lastMove.from === square || gameState.lastMove.to === square);
+          const isValidMove = gameState.validMoves.includes(square);
           return (
             <div
               key={`${i}-${j}`}
               className={`square ${(i + j) % 2 === 0 ? 'white' : 'black'} 
-                ${gameState.selectedPiece && gameState.selectedPiece.i === i && gameState.selectedPiece.j === j ? 'selected' : ''}
-                ${isLastMoveSquare ? 'highlight' : ''}`}
+                ${gameState.selectedPiece && gameState.selectedPiece.i === actualI && gameState.selectedPiece.j === actualJ ? 'selected' : ''}
+                ${isLastMoveSquare ? 'highlight' : ''}
+                ${isValidMove ? 'valid-move' : ''}`}
               onClick={() => handleSquareClick(i, j)}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, i, j)}
