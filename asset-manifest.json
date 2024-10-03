@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/QuickChess/static/css/main.b71a1f80.css",
-    "main.js": "/QuickChess/static/js/main.e40612dd.js",
+    "main.css": "/QuickChess/static/css/main.cd5ca27f.css",
+    "main.js": "/QuickChess/static/js/main.ec7f2074.js",
     "index.html": "/QuickChess/index.html",
-    "main.b71a1f80.css.map": "/QuickChess/static/css/main.b71a1f80.css.map",
-    "main.e40612dd.js.map": "/QuickChess/static/js/main.e40612dd.js.map"
+    "main.cd5ca27f.css.map": "/QuickChess/static/css/main.cd5ca27f.css.map",
+    "main.ec7f2074.js.map": "/QuickChess/static/js/main.ec7f2074.js.map"
   },
   "entrypoints": [
-    "static/css/main.b71a1f80.css",
-    "static/js/main.e40612dd.js"
+    "static/css/main.cd5ca27f.css",
+    "static/js/main.ec7f2074.js"
   ]
 }
