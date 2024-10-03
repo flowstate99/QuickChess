@@ -78,9 +78,6 @@ const Chessboard = () => {
       stockfishWorker.current.postMessage('uci');
       stockfishWorker.current.postMessage('ucinewgame');
       stockfishWorker.current.postMessage(`setoption name Skill Level value ${gameState.stockfishLevel}`);
-      stockfishWorker.current.postMessage(`setoption name Skill Level Maximum Error value ${1000 - gameState.stockfishLevel*50}`);
-      stockfishWorker.current.postMessage(`setOption name Skill Level Probability value ${180 - gameState.stockfishLevel * 10}`);
-      stockfishWorker.current.postMessage('go movetime 1500');
       stockfishWorker.current.onmessage = handleStockfishMessage;
     } catch (error) {
       console.error('Error initializing Stockfish worker:', error);
