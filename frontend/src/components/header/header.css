@@ -1,0 +1,90 @@
+header {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding-top: 0px;
+  padding-bottom: 0px;
+}
+.header-button {
+  background-color: transparent;
+  border-color: transparent;
+  padding-left: 50px;
+  width: 20%;
+}
+
+.header-button img {
+  position: relative;
+  width: 30%;
+}
+
+.dark-mode-container {
+  display: flex;
+  align-items: center;
+}
+
+.dark-mode-label {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+}
+
+.dark-mode-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 20px; /* Adjusted border-radius */
+}
+
+.dark-mode-slider:before {
+  position: absolute;
+  content: "";
+  height: 16px; /* Reduced height */
+  width: 16px; /* Reduced width */
+  left: 2px; /* Adjusted position */
+  bottom: 2px; /* Adjusted position */
+  background-color:rgb(51, 122, 255);
+  transition: .4s;
+  border-radius: 50%;
+}
+
+.dark-mode-checkbox:checked + .dark-mode-slider:before {
+  transform: translateX(20px); /* Adjusted translation */
+}
+
+
+.dark-mode-text {
+  position: relative;
+  margin-left: 10px;
+  font-size: 16px;
+}
+
+@media (max-width: 812px) {
+  header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    width: 40%;
+  }
+  .header-button {
+    padding-left: 10px;
+    width: 20%;
+  }
+  .header-button img{
+    background-color: transparent;
+    width: 90%;
+    margin-bottom: 10px;
+  }
+
+  .dark-mode-container {
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
+}
