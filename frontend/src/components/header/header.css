@@ -1,27 +1,43 @@
 header {
   display: flex;
-  flex-direction: row;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  background-color: #DEB64B;
   width: 100%;
-  padding-top: 0px;
-  padding-bottom: 0px;
 }
+
+.nav-bar {
+  display: flex;
+  flex-wrap: wrap;
+  padding-left: 35%;
+}
+
+.nav-bar-element {
+  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+  font-size: clamp(1rem, 3vw, 1.5rem);
+  text-decoration: none;
+  padding: 0.5rem;
+}
+
 .header-button {
+  display: flex;
   background-color: transparent;
   border-color: transparent;
-  padding-left: 50px;
-  width: 20%;
+  padding: 1rem;
+  max-width: 150px;
 }
 
 .header-button img {
-  position: relative;
   width: 30%;
+  height: auto;
 }
 
 .dark-mode-container {
   display: flex;
   align-items: center;
+  margin-left: auto;
+  padding-right: 20px;
 }
 
 .dark-mode-label {
@@ -40,51 +56,43 @@ header {
   bottom: 0;
   background-color: #ccc;
   transition: .4s;
-  border-radius: 20px; /* Adjusted border-radius */
+  border-radius: 20px;
 }
 
 .dark-mode-slider:before {
   position: absolute;
   content: "";
-  height: 16px; /* Reduced height */
-  width: 16px; /* Reduced width */
-  left: 2px; /* Adjusted position */
-  bottom: 2px; /* Adjusted position */
-  background-color:rgb(51, 122, 255);
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: rgb(51, 122, 255);
   transition: .4s;
   border-radius: 50%;
 }
 
-.dark-mode-checkbox:checked + .dark-mode-slider:before {
-  transform: translateX(20px); /* Adjusted translation */
+.dark-mode-checkbox {
+  opacity: 0;
+  width:0;
+  height: 0;
 }
 
+.dark-mode-checkbox:checked + .dark-mode-slider:before {
+  transform: translateX(20px);
+}
 
 .dark-mode-text {
-  position: relative;
   margin-left: 10px;
   font-size: 16px;
 }
 
-@media (max-width: 812px) {
+@media (max-width: 1010px) {
   header {
     display: flex;
     flex-direction: row;
-    justify-content: space-between;
-    width: 40%;
+    align-items: center;
   }
-  .header-button {
-    padding-left: 10px;
-    width: 20%;
-  }
-  .header-button img{
-    background-color: transparent;
-    width: 90%;
-    margin-bottom: 10px;
-  }
-
-  .dark-mode-container {
-    margin-top: 10px;
-    margin-bottom: 10px;
+  .nav-bar {
+    display: none;
   }
 }

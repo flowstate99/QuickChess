@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Chessboard from '../chessboard/Chessboard';
 import './login.css';
 
 function Login({ onLogin, darkMode }) {
@@ -15,9 +16,9 @@ function Login({ onLogin, darkMode }) {
         },
         body: JSON.stringify({ username, password }),
       });
-      
+
       const data = await response.json();
-      
+
       if (response.ok) {
         onLogin(data);
       } else {
@@ -47,9 +48,9 @@ function Login({ onLogin, darkMode }) {
         },
         body: JSON.stringify({ username, password }),
       });
-      
+
       const data = await response.json();
-      
+
       if (response.ok) {
         onLogin(data);
       } else {
@@ -66,29 +67,36 @@ function Login({ onLogin, darkMode }) {
   };
 
   return (
-    <div className={`login-container ${darkMode ? 'dark' : 'light'}`}>
-      <div className='auth-form'>
-        <div className='inputs'>
-          <input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="login-input"
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="login-input"
-        /> 
+    <div className={`login-landing-page ${darkMode ? 'dark' : 'light'}`}>
+      <div className='login-container'>
+        <div className='login-image'>
+          <img src='/quickChess.png' alt='QuickChess'></img>
         </div>
-        <div className='login-buttons'>
-          <button onClick={handleLogin} className="login-button">Login</button>
-          <button onClick={handleRegister} className="login-button">Register</button>
+        <div className='auth-form'>
+          <div className='inputs'>
+            <input
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="login-input"
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="login-input"
+            />
+          </div>
+          <div className='login-buttons'>
+            <button onClick={handleLogin} className="login-button">Login</button>
+            <button onClick={handleRegister} className="login-button">Register</button>
+          </div>
         </div>
       </div>
+      <h1> Try playing vs StockFish</h1>
+      <Chessboard />
     </div>
   );
 }
